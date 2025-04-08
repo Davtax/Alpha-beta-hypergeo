@@ -5,6 +5,8 @@ import numpy as np
 from scipy.integrate import romb, solve_ivp
 from scipy.interpolate import interp1d
 
+from .hamiltonians import lz_problem
+
 
 def compute_adiabatic_parameter(x_vec: np.ndarray, states: np.ndarray, energies: np.ndarray, initial_state: int,
                                 partial_Hamiltonian: np.ndarray, alpha: float, beta: float,
@@ -150,3 +152,50 @@ def compute_x_quad(energies: np.ndarray, states: np.ndarray, x_vec: np.ndarray, 
         s, x_sol = compute_parameters_interpolation_ivp(x_vec, G_tilde, c_tilde, n_s)
 
     return s, x_sol
+
+
+def solve_LZ(alpha: float, beta: float, x: Optional[int] = 1, n_s: Optional[int] = 2 ** 15 + 1,
+             reduction: Optional[int] = 0, z0: Optional[float] = -10) -> np.ndarray:
+    """
+    Solve the Landau-Zener model for a given set of parameters
+
+    Parameters
+    ----------
+    alpha: float
+        Exponent for the adiabatic parameter
+    beta: float
+        Exponent for the adiabatic parameter
+    x: int (optional, default=1)
+        Value for the x parameter
+    n_s: int (optional, default=2**15+1)
+        Number of points for the interpolation
+    reduction: int (optional, default=0)
+        Reduction factor for the final solution
+
+    Returns
+    -------
+    z_sol: np.ndarray
+        Solution for the driving parameter
+    """
+
+    zs = np.linspace(z0, -z0, 2 ** 15 + 1)
+    partial_hamiltonian = np.array([lz_problem(0, 1) for _ in range(len(zs))])
+
+    hypermatrix = np.array([lz_problem(x, z) for z in zs])
+    eigvalues, eigmodes = np.linalg.eigh(hypermatrix)
+
+    if alpha + beta == np.inf:
+        z_sol = np.zeros(n_s)
+
+    elif alpha + beta == -np.inf:
+        z_sol = np.ones(n_s) * min(zs)
+        z_sol[n_s // 2:] = max(zs)
+
+    else:
+        s, z_sol = compute_x_quad(eigvalues, eigmodes, zs, partial_hamiltonian, adiabatic_state=0, alpha=alpha,
+                                  beta=beta, n_s=n_s)
+
+    # z_sol[-1] = zs[-1]
+    z_sol = z_sol[::2 ** reduction]
+
+    return z_sol
