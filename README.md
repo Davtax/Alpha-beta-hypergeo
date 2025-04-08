@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/962513392.svg)](https://doi.org/10.5281/zenodo.15173706)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15173706.svg)](https://doi.org/10.5281/zenodo.15173706)
 
 # Unifying adiabatic state-transfer protocols with (α, β)-hypergeometries
 _Authors: Christian Ventura Meinersen, David Fernandez-Fernandez, Gloria Platero, Maximilian Rimbach-Russ_
