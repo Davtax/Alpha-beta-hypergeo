@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 import matplotlib.pyplot as plt
-import mplcursors
 import numpy as np
 from matplotlib import colormaps
 from matplotlib.colors import LinearSegmentedColormap, Normalize, rgb2hex
@@ -127,9 +126,8 @@ def identify_pulses(alphas, betas):
 
 def plot_gradient_lines(x: np.ndarray, ys: List[np.ndarray], alphas: np.ndarray, betas: np.ndarray,
                         x_label: Optional[str] = None, y_label: Optional[str] = None, cbar_label: Optional[str] = None,
-                        ax: Optional[plt.axis] = None, cursor: Optional[bool] = False,
-                        legend_bool: Optional[bool] = True, set_limits: Optional[bool] = True,
-                        cbar_bool: Optional[bool] = True):
+                        ax: Optional[plt.axis] = None, legend_bool: Optional[bool] = True,
+                        set_limits: Optional[bool] = True, cbar_bool: Optional[bool] = True):
     colors, linewidths, zorders, labels, sm = identify_pulses(alphas, betas)
 
     if ax is None:
@@ -152,27 +150,7 @@ def plot_gradient_lines(x: np.ndarray, ys: List[np.ndarray], alphas: np.ndarray,
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
 
-    if cursor:
-        add_cursor(lines)
-
     if cbar_bool:
         return ax, sm, cbar
     else:
         return ax, sm
-
-
-def add_cursor(lines: List[plt.Line2D], lc: Optional[str] = 'yellow'):
-    annotation_kwargs = dict(bbox=dict(boxstyle="round,pad=.5", fc="w", alpha=1, ec="k"),
-                             arrowprops=dict(arrowstyle="->", connectionstyle="arc3", shrinkB=0, ec="k"))
-
-    highlight_kwargs = dict(color=lc, markeredgecolor=lc, linewidth=3, markeredgewidth=3, facecolor=lc, edgecolor=lc)
-
-    cursor = mplcursors.cursor(lines, highlight=True, annotation_kwargs=annotation_kwargs,
-                               highlight_kwargs=highlight_kwargs)
-
-    @cursor.connect("add")
-    def on_add(sel):
-        label_tmp = sel.artist.get_label()
-        if label_tmp[0] == '_':
-            label_tmp = label_tmp[1:]
-        sel.annotation.set_text(label_tmp)
