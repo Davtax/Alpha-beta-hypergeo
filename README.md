@@ -6,7 +6,7 @@ All notebooks start with a small introduction of the relevant equations and conc
 The final figures, after a post process in some cases, can be found in the [pictures](https://github.com/Davtax/Alpha-beta-hypergeo/tree/main/pictures) folder, in a `.pdf` format.
 
 <p align="center">
-  <img src="https://github.com/Davtax/Alpha-beta-hypergeo/blob/main/pictures/schematic_piture.png" width="350" title="system_schematic">
+  <img src="https://github.com/Davtax/Alpha-beta-hypergeo/blob/main/pictures/schematic_piture.png" width="1100" title="schematic">
 </p>
 
 
