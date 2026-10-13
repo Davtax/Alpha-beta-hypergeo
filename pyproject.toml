@@ -1,0 +1,32 @@
+[project]
+name = "hyperQUAD"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "ipykernel==6.29.5", # pinned to avoid problem with ipywidgets
+    "filelock>=3.19.1",
+    "ipympl>=0.9.8",
+    "ipynbname>=2025.8.0.0",
+    "joblib>=1.5.2",
+    "jupyterlab==4.5.1", # To avoid problem with random cell jumps
+    "jupyterlab-execute-time>=3.2.0",
+    "matplotlib>=3.9.4",
+    "pdfrw>=0.4",
+    "qutip>=5.0.4", # the code uses the QuTiP 5 API (qt.coefficient, qt.solver.integrator)
+    "scipy>=1.13.1",
+    "numpy>=1.26.4,<2", # numpy 2 pickles in .npz files cannot be loaded with numpy 1.x (cluster)
+    "cython>=3.0",
+    "scienceplots>=2.1.1",
+    "setuptools>=80.9.0",
+    "theme-darcula>=4.0.0",
+    "tqdm>=4.67.1",
+    "varname>=0.15.0",
+    "sympy>=1.14.0",
+    "scikit-image>=0.24.0",
+    "numba>=0.60.0",
+    "colorstamps>=0.1.3",
+    "brokenaxes>=0.6.2",
+    "mplcursors>=0.7",
+]
