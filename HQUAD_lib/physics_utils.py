@@ -82,7 +82,32 @@ def fidelity_LZ(z0: float, pulse: np.ndarray, tf: float, x: Optional[float] = 1,
 
 
 def fidelity_shuttling(pulse: np.ndarray, tf: float, tc: float, phiL: float, phiR: float, DeltaL: float, DeltaR: float,
-                       gamma: Optional[float] = 0) -> float:
+                       gamma: Optional[float] = 0, adiabatic_state: Optional[int] = 1) -> float:
+    """
+    Transfer fidelity for the shuttling model (two dots with two valleys each). The initial and target states are the
+    instantaneous eigenstates with index adiabatic_state (sorted by increasing energy) of the Hamiltonian at the
+    initial and final values of the pulse, respectively. By default, the first excited state is transferred, i.e.,
+    |L, v_L^+> -> |R, v_R^+>.
+
+    Parameters
+    ----------
+    pulse: np.ndarray
+        Detuning pulse epsilon(t), sampled in a uniform time grid in [0, tf]
+    tf: float
+        Total pulse time
+    tc, phiL, phiR, DeltaL, DeltaR: float
+        Parameters of the shuttling Hamiltonian (see hamiltonians.two_valleys_system)
+    gamma: float (optional, default=0)
+        Dephasing rate. If non-zero, the dynamics is computed with a Lindblad master equation with jump operators
+        sqrt(gamma) * lambda_i, with lambda_i the diagonal generalized Pauli matrices.
+    adiabatic_state: int (optional, default=1)
+        Index of the instantaneous eigenstate to be transferred
+
+    Returns
+    -------
+    fidelity: float
+        Population of the target state at the end of the protocol
+    """
     time = np.linspace(0, tf, len(pulse))
 
     H_0 = qt.Qobj(two_valleys_system(0, tc, phiL, phiR, DeltaL, DeltaR))
@@ -90,8 +115,9 @@ def fidelity_shuttling(pulse: np.ndarray, tf: float, tc: float, phiL: float, phi
     H_T = [H_0, [H_driving, qt.coefficient(pulse, tlist=time)]]
     H_T = qt.QobjEvo(H_T)
 
-    psi_0 = qt.Qobj(two_valleys_system(pulse[0], tc, phiL, phiR, DeltaL, DeltaR)).groundstate()[1]
-    psi_target = qt.Qobj(two_valleys_system(pulse[-1], tc, phiL, phiR, DeltaL, DeltaR)).groundstate()[1]
+    psi_0 = qt.Qobj(two_valleys_system(pulse[0], tc, phiL, phiR, DeltaL, DeltaR)).eigenstates()[1][adiabatic_state]
+    psi_target = qt.Qobj(two_valleys_system(pulse[-1], tc, phiL, phiR, DeltaL, DeltaR)).eigenstates()[1][
+        adiabatic_state]
 
     if gamma != 0:
         c_ops = generalized_Pauli_Matrices(4, qutip=True)

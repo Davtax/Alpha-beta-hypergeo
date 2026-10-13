@@ -288,7 +288,7 @@ def parameter_run(fun: callable, param_names: Union[str, List[str], List[List[st
             comm = MPI.COMM_WORLD
             size = comm.Get_size()
             rank = comm.Get_rank()
-        except ImportError:
+        except (ImportError, RuntimeError):  # mpi4py not installed, or MPI library not found
             pass
 
         if size == 1 and backend is None:
