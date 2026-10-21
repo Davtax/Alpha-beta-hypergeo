@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from __future__ import annotations
 
 import numpy as np
 from scipy.integrate import romb
@@ -7,7 +7,7 @@ from scipy.linalg import qr, solve
 from .QUAD_utils import compute_x_quad
 
 
-def gram_matrix(functions: np.ndarray, ds: float) -> np.ndarray:
+def gram_matrix(functions: np.ndarray | list[np.ndarray], ds: float) -> np.ndarray:
     """
     Compute the Gram matrix G_ij = <f_i|f_j> = int_0^1 dtau f_i(tau) f_j(tau), using Romberg integration.
 
@@ -33,8 +33,9 @@ def gram_matrix(functions: np.ndarray, ds: float) -> np.ndarray:
     return G
 
 
-def independent_basis(functions: np.ndarray, ds: float, tolerance: Optional[float] = 1e-10) -> Tuple[
-    np.ndarray, np.ndarray]:
+def independent_basis(
+    functions: np.ndarray | list[np.ndarray], ds: float, tolerance: float = 1e-10
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Obtain a linearly independent subset of an overcomplete set of functions, using a QR decomposition with pivoting of
     the Gram matrix.
@@ -69,7 +70,9 @@ def independent_basis(functions: np.ndarray, ds: float, tolerance: Optional[floa
     return independent_functions, G_independent
 
 
-def split_basis(functions: np.ndarray, ds: float, tolerance: Optional[float] = 1e-10) -> Tuple[np.ndarray, np.ndarray]:
+def split_basis(
+    functions: np.ndarray | list[np.ndarray], ds: float, tolerance: float = 1e-10
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Split each basis function f_n(tau) into two functions, one restricted to tau < 1/2 and the other to tau >= 1/2, such
     that the approximated pulse reads g(tau) ~ sum_n [c_n^(1) Theta(1/2 - tau) + c_n^(2) Theta(tau - 1/2)] f_n(tau).
@@ -96,14 +99,18 @@ def split_basis(functions: np.ndarray, ds: float, tolerance: Optional[float] = 1
     N, n_s = functions.shape
 
     split_functions = np.vstack([functions] * 2)
-    split_functions[:N, n_s // 2:] = 0
-    split_functions[N:, :n_s // 2] = 0
+    split_functions[:N, n_s // 2 :] = 0
+    split_functions[N:, : n_s // 2] = 0
 
     return independent_basis(split_functions, ds, tolerance=tolerance)
 
 
-def approximate_fun(ds: float, independent_functions: np.ndarray, G_independent: np.ndarray,
-                    driving_sol: np.ndarray) -> np.ndarray:
+def approximate_fun(
+    ds: float,
+    independent_functions: np.ndarray | list[np.ndarray],
+    G_independent: np.ndarray,
+    driving_sol: np.ndarray,
+) -> np.ndarray:
     """
     Approximate a function g(tau) as a linear combination of the basis functions, g'(tau) = sum_i c_i f_i(tau). The
     coefficients are obtained by solving the linear system G c = b, with b_i = <g|f_i>.
@@ -124,6 +131,7 @@ def approximate_fun(ds: float, independent_functions: np.ndarray, G_independent:
     driving_approx: np.ndarray
         Approximated function
     """
+    independent_functions = np.asarray(independent_functions)
     rank = len(independent_functions)
     b = np.zeros(rank)
     for i in range(rank):
@@ -134,10 +142,19 @@ def approximate_fun(ds: float, independent_functions: np.ndarray, G_independent:
     return driving_approx
 
 
-def compute_pulse_and_approx(eigvalues: np.ndarray, eigmodes: np.ndarray, driving_parameter: np.ndarray,
-                             partial_hamiltonian, alpha: float, beta: float, adiabatic_state: int,
-                             independent_functions: np.ndarray, G_independent: np.ndarray, limit_sup: float,
-                             limit_inf: float) -> Tuple[np.ndarray, np.ndarray]:
+def compute_pulse_and_approx(
+    eigvalues: np.ndarray,
+    eigmodes: np.ndarray,
+    driving_parameter: np.ndarray,
+    partial_hamiltonian: np.ndarray,
+    alpha: float,
+    beta: float,
+    adiabatic_state: int,
+    independent_functions: np.ndarray | list[np.ndarray],
+    G_independent: np.ndarray,
+    limit_sup: float,
+    limit_inf: float,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Solve the (alpha, beta) hypergeometry for a given Hamiltonian, and approximate the obtained pulse using a basis of
     functions.
@@ -149,51 +166,67 @@ def compute_pulse_and_approx(eigvalues: np.ndarray, eigmodes: np.ndarray, drivin
     driving_approx: np.ndarray
         Approximated pulse
     """
-    s, driving_sol = compute_x_quad(eigvalues, eigmodes, driving_parameter, partial_hamiltonian, adiabatic_state, alpha,
-                                    beta, n_s=2 ** 20 + 1, limit_sup=limit_sup, limit_inf=limit_inf)
+    s, driving_sol = compute_x_quad(
+        eigvalues,
+        eigmodes,
+        driving_parameter,
+        partial_hamiltonian,
+        adiabatic_state,
+        alpha,
+        beta,
+        n_s=2**20 + 1,
+        limit_sup=limit_sup,
+        limit_inf=limit_inf,
+    )
 
     reduction = int(np.log2((len(s) - 1) / (len(independent_functions[0]) - 1)))
-    s = s[::2 ** reduction]
-    driving_sol = driving_sol[::2 ** reduction]
+    s = s[:: 2**reduction]
+    driving_sol = driving_sol[:: 2**reduction]
 
     if len(s) != len(independent_functions[0]):
         raise ValueError(
-            f'The number of points in the solution does not match the number of points in the basis. {alpha=}, {beta=}, {len(s)=}, {len(independent_functions[0])=}')
+            f"The number of points in the solution does not match the number of points in the basis. {alpha=}, {beta=}, {len(s)=}, {len(independent_functions[0])=}"
+        )
 
     ds = np.abs(s[1] - s[0])
 
-    driving_approx = approximate_fun(ds, independent_functions, G_independent, driving_sol)
+    driving_approx = approximate_fun(
+        ds, independent_functions, G_independent, driving_sol
+    )
 
     return driving_sol, driving_approx
 
 
-def compute_error_basis_approx(eigvalues: np.ndarray, eigmodes: np.ndarray, driving_parameter: np.ndarray,
-                               partial_hamiltonian, alpha: float, beta: float, adiabatic_state: int,
-                               independent_functions: np.ndarray, G_independent: np.ndarray, limit_sup: float,
-                               limit_inf: float) -> float:
+def compute_error_basis_approx(
+    eigvalues: np.ndarray,
+    eigmodes: np.ndarray,
+    driving_parameter: np.ndarray,
+    partial_hamiltonian: np.ndarray,
+    alpha: float,
+    beta: float,
+    adiabatic_state: int,
+    independent_functions: np.ndarray | list[np.ndarray],
+    G_independent: np.ndarray,
+    limit_sup: float,
+    limit_inf: float,
+) -> float:
     """
     Compute the reconstruction error E = int_0^1 dtau |g(tau) - g'(tau)| between the exact pulse g(tau) and its
     approximation g'(tau) using a basis of functions.
     """
-    driving_sol, driving_approx = compute_pulse_and_approx(eigvalues, eigmodes, driving_parameter, partial_hamiltonian,
-                                                           alpha, beta, adiabatic_state, independent_functions,
-                                                           G_independent, limit_sup, limit_inf)
+    driving_sol, driving_approx = compute_pulse_and_approx(
+        eigvalues,
+        eigmodes,
+        driving_parameter,
+        partial_hamiltonian,
+        alpha,
+        beta,
+        adiabatic_state,
+        independent_functions,
+        G_independent,
+        limit_sup,
+        limit_inf,
+    )
 
     ds = 1 / (len(driving_sol) - 1)
-    error = np.sum(np.abs(driving_sol - driving_approx)) * ds
-    return error
-
-
-def normalized_time(time_seg: float) -> str:
-    """
-    Normalize the time to a human-readable format
-    """
-    if time_seg < 60:
-        return f'{time_seg:.2f} s'
-    elif time_seg < 3600:
-        mins, sec = divmod(time_seg, 60)
-        return f'{int(mins)} min {sec:.2f} s'
-    else:
-        hours, time_seg = divmod(time_seg, 3600)
-        mins, sec = divmod(time_seg, 60)
-        return f'{int(hours)} h {int(mins)} min {sec:.2f} s'
+    return float(np.sum(np.abs(driving_sol - driving_approx)) * ds)

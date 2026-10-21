@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
 import qutip as qt
-from typing import Tuple
 
 PAULI_X = np.array([[0, 1], [1, 0]])
 PAULI_Y = np.array([[0, -1j], [1j, 0]])
@@ -12,7 +13,9 @@ def hamiltonian(z: float, x: float) -> np.ndarray:
     return np.array([[z, x], [x, -z]])
 
 
-def _compute_U(x: float, pulse: np.ndarray, tf: float) -> Tuple[np.ndarray, qt.Qobj]:
+def _compute_U(
+    x: float, pulse: np.ndarray, tf: float
+) -> tuple[np.ndarray, list[qt.Qobj]]:
     time = np.linspace(0, tf, len(pulse))
 
     H_0 = qt.Qobj(hamiltonian(0, x))
@@ -22,7 +25,29 @@ def _compute_U(x: float, pulse: np.ndarray, tf: float) -> Tuple[np.ndarray, qt.Q
     return time, qt.propagator(H_T, time)
 
 
-def compute_FF_LZ(x: float, pulse: np.ndarray, tf: float, omegas: np.ndarray) -> np.ndarray:
+def compute_FF_LZ(
+    x: float, pulse: np.ndarray, tf: float, omegas: np.ndarray
+) -> np.ndarray:
+    """
+    Filter functions F_i(omega) = sum_j |R_ij(omega)|^2 / 2 of a Landau-Zener pulse, with
+    R_ij(omega) = int_0^tf dt Tr[U^dagger(t) sigma_i U(t) sigma_j] e^{i omega t}, and U(t) the noiseless time evolution.
+
+    Parameters
+    ----------
+    x: float
+        Coupling between the diabatic states
+    pulse: np.ndarray
+        Pulse z(t), sampled in a uniform time grid in [0, tf]
+    tf: float
+        Total pulse time
+    omegas: np.ndarray
+        Angular frequencies at which the filter functions are computed
+
+    Returns
+    -------
+    FF: np.ndarray
+        Filter functions for each Pauli direction (x, y, z). The dimension is [3 x len(omegas)]
+    """
     time, U_t = _compute_U(x, pulse, tf)
     U_t = np.array([U_i[:] for U_i in U_t])
 
@@ -31,9 +56,14 @@ def compute_FF_LZ(x: float, pulse: np.ndarray, tf: float, omegas: np.ndarray) ->
     R_ij = np.zeros((3, 3, len(time)))
     for i in range(3):
         for j in range(3):
-            R_ij[i, j] = np.einsum('tba,bc,tcd,da->t', U_t.conj(), PAULIS[i], U_t, PAULIS[j]).real
+            R_ij[i, j] = np.einsum(
+                "tba,bc,tcd,da->t", U_t.conj(), PAULIS[i], U_t, PAULIS[j]
+            ).real
 
-    R_ij_omega = np.einsum('abt,to->abo', R_ij, np.exp(1j * omegas[None, :] * time[:, None])) * dt
+    R_ij_omega = (
+        np.einsum("abt,to->abo", R_ij, np.exp(1j * omegas[None, :] * time[:, None]))
+        * dt
+    )
 
     FF = np.zeros((3, len(omegas)))
     for alpha in range(3):

@@ -9,7 +9,9 @@ def lambda_system(eps12: float, eps23: float, tau1: float, tau2: float) -> np.nd
     return np.array([[eps12, tau1, 0], [tau1, 0, tau2], [0, tau2, eps23]])
 
 
-def two_valleys_system(eps: float, tc: float, phiL: float, phiR: float, DeltaL: float, DeltaR: float) -> np.ndarray:
+def two_valleys_system(
+    eps: float, tc: float, phiL: float, phiR: float, DeltaL: float, DeltaR: float
+) -> np.ndarray:
     tee = tc / 2 * (1 + np.exp(1j * (phiL - phiR)))
     tgg = tee.conj()
 

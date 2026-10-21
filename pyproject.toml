@@ -1,33 +1,46 @@
 [project]
-name = "hyperQUAD"
-version = "0.1.0"
-description = "Add your description here"
+name = "alpha-beta-hypergeo"
+version = "1.0.0"
+description = "Codes to reproduce the figures in the article: Unifying adiabatic state-transfer protocols with (α, β)-hypergeometries."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Christian Ventura Meinersen" },
+    { name = "David Fernandez-Fernandez" },
+    { name = "Gloria Platero" },
+    { name = "Maximilian Rimbach-Russ" },
+]
 requires-python = ">=3.9"
 dependencies = [
-    "ipykernel==6.29.5", # pinned to avoid problem with ipywidgets
-    "filelock>=3.19.1",
-    "ipympl>=0.9.8",
-    "ipynbname>=2025.8.0.0",
-    "joblib>=1.5.2",
-    "jupyterlab==4.5.1", # To avoid problem with random cell jumps
-    "jupyterlab-execute-time>=3.2.0",
-    "matplotlib>=3.9.4",
-    "pdfrw>=0.4",
-    "qutip>=5.0.4", # the code uses the QuTiP 5 API (qt.coefficient, qt.solver.integrator)
+    "numpy>=1.26.4",
     "scipy>=1.13.1",
-    "numpy>=1.26.4,<2", # numpy 2 pickles in .npz files cannot be loaded with numpy 1.x (cluster)
-    "cython>=3.0",
-    "scienceplots>=2.1.1",
-    "setuptools>=80.9.0",
-    "theme-darcula>=4.0.0",
+    "matplotlib>=3.9.4",
     "tqdm>=4.67.1",
-    "varname>=0.15.0",
-    "sympy>=1.14.0",
-    "scikit-image>=0.24.0",
-    "numba>=0.60.0",
+    "parameterrun>=0.4.1",  # Parallel parameter sweeps (https://github.com/Davtax/ParameterRun)
+    "qutip>=5.0.4",       # The code uses the QuTiP 5 API
+    "qutip-qtrl>=0.2.0",  # Only needed for the comparison with CRAB and GRAPE (Figs. 12-14)
     "colorstamps>=0.1.3",
     "brokenaxes>=0.6.2",
-    "mplcursors>=0.7",
-    "qutip-qtrl>=0.2.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/Davtax/Alpha-beta-hypergeo"
+DOI = "https://doi.org/10.5281/zenodo.15173706"
+
+[dependency-groups]
+# Installed by default with `uv sync`, to run the notebooks
+dev = [
+    "ipykernel==6.29.5",  # Pinned to avoid problems with ipywidgets
+    "ipywidgets>=8.1",    # Progress bars inside the notebooks
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["HQUAD_lib"]
+
+[tool.ruff.lint.per-file-ignores]
+# The module names follow the notation of the article (QUAD, hyper-QUAD)
+"HQUAD_lib/*" = ["N999"]
+
+[tool.ty.environment]
+python = ".venv"

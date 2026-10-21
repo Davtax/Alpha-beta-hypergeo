@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import warnings
-from typing import Optional, Tuple
 
 import numpy as np
 from scipy.integrate import romb, solve_ivp
@@ -8,10 +9,17 @@ from scipy.interpolate import interp1d
 from .hamiltonians import lz_problem
 
 
-def compute_adiabatic_parameter(x_vec: np.ndarray, states: np.ndarray, energies: np.ndarray, initial_state: int,
-                                partial_Hamiltonian: np.ndarray, alpha: float, beta: float,
-                                limit_sup: Optional[float] = np.inf, limit_inf: Optional[float] = 0) -> Tuple[
-    np.ndarray, float]:
+def compute_adiabatic_parameter(
+    x_vec: np.ndarray,
+    states: np.ndarray,
+    energies: np.ndarray,
+    initial_state: int,
+    partial_Hamiltonian: np.ndarray,
+    alpha: float,
+    beta: float,
+    limit_sup: float = np.inf,
+    limit_inf: float = 0,
+) -> tuple[np.ndarray, float]:
     """
     Compute the G_tensor needed for the adiabatic protocol and the value of tilde{c}.
 
@@ -41,7 +49,8 @@ def compute_adiabatic_parameter(x_vec: np.ndarray, states: np.ndarray, energies:
     G_tensor: np.ndarray
         Matrix with the G_tensor computed
     """
-    n, dim = np.shape(energies)  # Extract the number of steps for the independent variable, and the number of states
+    # Number of steps for the independent variable, and number of states
+    n, dim = np.shape(energies)
 
     counter = 0  # Temp variable to save the number of G_tensor computed
     G_tensor = np.zeros([n, dim - 1])  # Matrix to save the G_tensor
@@ -49,11 +58,17 @@ def compute_adiabatic_parameter(x_vec: np.ndarray, states: np.ndarray, energies:
         if i != initial_state:  # If the state is not the initial one
             # Compute the factor, this includes a scalar product
             num = np.abs(
-                np.einsum('ia,iab,ib->i', states[..., initial_state].conj(), partial_Hamiltonian, states[..., i],
-                          optimize='greedy'))
+                np.einsum(
+                    "ia,iab,ib->i",
+                    states[..., initial_state].conj(),
+                    partial_Hamiltonian,
+                    states[..., i],
+                    optimize="greedy",
+                )
+            )
 
             den = np.abs(energies[:, i] - energies[:, initial_state])
-            G_tensor[:, counter] = num ** beta / (den ** alpha)
+            G_tensor[:, counter] = num**beta / (den**alpha)
 
             counter += 1
 
@@ -68,8 +83,9 @@ def compute_adiabatic_parameter(x_vec: np.ndarray, states: np.ndarray, energies:
     return G_tensor, float(c_tilde)
 
 
-def compute_parameters_interpolation_ivp(x_vec: np.ndarray, G_tensor: np.ndarray, c_tilde: float, n_s: int) -> Tuple[
-    np.ndarray, np.ndarray]:
+def compute_parameters_interpolation_ivp(
+    x_vec: np.ndarray, G_tensor: np.ndarray, c_tilde: float, n_s: int
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Function to solve the ODE which gives the result for the parameters in terms of the adimensional variable s=[0,1]
     for the adiabatic protocol
@@ -95,22 +111,42 @@ def compute_parameters_interpolation_ivp(x_vec: np.ndarray, G_tensor: np.ndarray
 
     sig = np.sign(x_vec[1] - x_vec[0])
 
-    factor_interpolation = interp1d(x_vec, c_tilde / np.sqrt(G_tensor), kind='quadratic', fill_value="extrapolate")
+    factor_interpolation = interp1d(
+        x_vec, c_tilde / np.sqrt(G_tensor), kind="quadratic", fill_value="extrapolate"
+    )
 
     def model(t, y):  # EDO to be solved
         return sig * factor_interpolation(y)
 
     s = np.linspace(0, 1, n_s)
-    sol = solve_ivp(model, [0, 1], [x_vec[0]], t_eval=s, method='RK45', atol=1e-8, rtol=1e-6, dense_output=True)
+    sol = solve_ivp(
+        model,
+        [0, 1],
+        [x_vec[0]],
+        t_eval=s,
+        method="RK45",
+        atol=1e-8,
+        rtol=1e-6,
+        dense_output=True,
+    )
     s = sol.t
     x_sol = sol.y[0]
 
     return s, x_sol
 
 
-def compute_x_quad(energies: np.ndarray, states: np.ndarray, x_vec: np.ndarray, partial_hamiltonian: np.ndarray,
-                   adiabatic_state: int, alpha: float, beta: float, limit_sup: Optional[float] = np.inf,
-                   limit_inf: Optional[float] = 0, n_s: Optional[int] = 2 ** 18 + 1) -> Tuple[np.ndarray, np.ndarray]:
+def compute_x_quad(
+    energies: np.ndarray,
+    states: np.ndarray,
+    x_vec: np.ndarray,
+    partial_hamiltonian: np.ndarray,
+    adiabatic_state: int,
+    alpha: float,
+    beta: float,
+    limit_sup: float = np.inf,
+    limit_inf: float = 0,
+    n_s: int = 2**18 + 1,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the driving parameter for the adiabatic protocol
 
@@ -134,7 +170,7 @@ def compute_x_quad(energies: np.ndarray, states: np.ndarray, x_vec: np.ndarray, 
         Upper limit for the G_tensor
     limit_inf: float
         Lower limit for the G_tensor
-    n_s: Optional[int]
+    n_s: int
         Number of points for the interpolation
 
     Returns
@@ -144,18 +180,33 @@ def compute_x_quad(energies: np.ndarray, states: np.ndarray, x_vec: np.ndarray, 
     x_sol: np.ndarray
         Solution for the driving parameter
     """
-    G_tilde, c_tilde = compute_adiabatic_parameter(x_vec, states, energies, adiabatic_state, partial_hamiltonian, alpha,
-                                                   beta, limit_sup=limit_sup, limit_inf=limit_inf)
+    G_tilde, c_tilde = compute_adiabatic_parameter(
+        x_vec,
+        states,
+        energies,
+        adiabatic_state,
+        partial_hamiltonian,
+        alpha,
+        beta,
+        limit_sup=limit_sup,
+        limit_inf=limit_inf,
+    )
 
     with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
+        warnings.simplefilter("ignore")
         s, x_sol = compute_parameters_interpolation_ivp(x_vec, G_tilde, c_tilde, n_s)
 
     return s, x_sol
 
 
-def solve_LZ(alpha: float, beta: float, x: Optional[int] = 1, n_s: Optional[int] = 2 ** 15 + 1,
-             reduction: Optional[int] = 0, z0: Optional[float] = -10) -> np.ndarray:
+def solve_LZ(
+    alpha: float,
+    beta: float,
+    x: float = 1,
+    n_s: int = 2**15 + 1,
+    reduction: int = 0,
+    z0: float = -10,
+) -> np.ndarray:
     """
     Solve the Landau-Zener model for a given set of parameters
 
@@ -165,12 +216,14 @@ def solve_LZ(alpha: float, beta: float, x: Optional[int] = 1, n_s: Optional[int]
         Exponent for the adiabatic parameter
     beta: float
         Exponent for the adiabatic parameter
-    x: int (optional, default=1)
+    x: float (optional, default=1)
         Value for the x parameter
     n_s: int (optional, default=2**15+1)
         Number of points for the interpolation
     reduction: int (optional, default=0)
-        Reduction factor for the final solution
+        The solution is downsampled by a factor 2**reduction
+    z0: float (optional, default=-10)
+        Initial value of the pulse, z(t=0) = -z(t=tf) = z0
 
     Returns
     -------
@@ -178,7 +231,7 @@ def solve_LZ(alpha: float, beta: float, x: Optional[int] = 1, n_s: Optional[int]
         Solution for the driving parameter
     """
 
-    zs = np.linspace(z0, -z0, 2 ** 15 + 1)
+    zs = np.linspace(z0, -z0, 2**15 + 1)
     partial_hamiltonian = np.array([lz_problem(0, 1) for _ in range(len(zs))])
 
     hypermatrix = np.array([lz_problem(x, z) for z in zs])
@@ -189,13 +242,20 @@ def solve_LZ(alpha: float, beta: float, x: Optional[int] = 1, n_s: Optional[int]
 
     elif alpha + beta == -np.inf:
         z_sol = np.ones(n_s) * min(zs)
-        z_sol[n_s // 2:] = max(zs)
+        z_sol[n_s // 2 :] = max(zs)
 
     else:
-        s, z_sol = compute_x_quad(eigvalues, eigmodes, zs, partial_hamiltonian, adiabatic_state=0, alpha=alpha,
-                                  beta=beta, n_s=n_s)
+        _, z_sol = compute_x_quad(
+            eigvalues,
+            eigmodes,
+            zs,
+            partial_hamiltonian,
+            adiabatic_state=0,
+            alpha=alpha,
+            beta=beta,
+            n_s=n_s,
+        )
 
-    # z_sol[-1] = zs[-1]
-    z_sol = z_sol[::2 ** reduction]
+    z_sol = z_sol[:: 2**reduction]
 
     return z_sol
